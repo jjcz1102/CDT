@@ -54,12 +54,6 @@ export WANDB_ENTITY
 
 if [[ "${WANDB_MODE}" == "online" ]]; then
   if [[ -n "${WANDB_API_KEY:-}" ]]; then
-    # wandb 0.14 expects a legacy 40-char key; new keys start with "wandb_v1_".
-    if [[ "${WANDB_API_KEY}" == wandb_v1_* ]]; then
-      echo "[train] WANDB_API_KEY is 'wandb_v1_*' format; wandb 0.14 may reject it."
-      echo "[train] Switch to WANDB_MODE=offline, or upgrade wandb, or use a legacy 40-char key."
-      exit 1
-    fi
     wandb login --relogin "${WANDB_API_KEY}"
   else
     echo "[train] WANDB_MODE=online but WANDB_API_KEY is not set."
