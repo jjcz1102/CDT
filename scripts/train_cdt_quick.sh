@@ -41,10 +41,12 @@ if [[ -f "${LOCAL_ENV_FILE}" ]]; then
 fi
 
 cd "${REPO_DIR}"
-if command -v conda >/dev/null 2>&1 && conda env list | awk '{print $1}' | grep -qx "${CONDA_ENV_NAME}"; then
-  conda activate "${CONDA_ENV_NAME}"
+if [[ "${CONDA_DEFAULT_ENV:-}" == "${CONDA_ENV_NAME}" ]]; then
+  :
+elif command -v conda >/dev/null 2>&1; then
+  conda activate "${CONDA_ENV_NAME}" || echo "[train] skip conda activate: env '${CONDA_ENV_NAME}' not found"
 else
-  echo "[train] skip conda activate: env '${CONDA_ENV_NAME}' not found"
+  echo "[train] skip conda activate: conda not found"
 fi
 export DSRL_DATASET_DIR="${DATASET_DIR}"
 export WANDB_MODE
@@ -52,6 +54,12 @@ export WANDB_ENTITY
 
 if [[ "${WANDB_MODE}" == "online" ]]; then
   if [[ -n "${WANDB_API_KEY:-}" ]]; then
+    # wandb 0.14 expects a legacy 40-char key; new keys start with "wandb_v1_".
+    if [[ "${WANDB_API_KEY}" == wandb_v1_* ]]; then
+      echo "[train] WANDB_API_KEY is 'wandb_v1_*' format; wandb 0.14 may reject it."
+      echo "[train] Switch to WANDB_MODE=offline, or upgrade wandb, or use a legacy 40-char key."
+      exit 1
+    fi
     wandb login --relogin "${WANDB_API_KEY}"
   else
     echo "[train] WANDB_MODE=online but WANDB_API_KEY is not set."

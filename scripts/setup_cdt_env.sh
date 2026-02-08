@@ -33,15 +33,23 @@ if command -v conda >/dev/null 2>&1; then
 fi
 
 cd "${REPO_DIR}"
-if command -v conda >/dev/null 2>&1 && conda env list | awk '{print $1}' | grep -qx "${CONDA_ENV_NAME}"; then
-  conda activate "${CONDA_ENV_NAME}"
+if [[ "${CONDA_DEFAULT_ENV:-}" == "${CONDA_ENV_NAME}" ]]; then
+  :
+elif command -v conda >/dev/null 2>&1; then
+  conda activate "${CONDA_ENV_NAME}" || echo "[setup] skip conda activate: env '${CONDA_ENV_NAME}' not found"
 else
-  echo "[setup] skip conda activate: env '${CONDA_ENV_NAME}' not found"
+  echo "[setup] skip conda activate: conda not found"
 fi
 
 # Optional: set WANDB_API_KEY in your shell before sourcing this script.
 if [[ -n "${WANDB_API_KEY:-}" ]]; then
-  wandb login --relogin "${WANDB_API_KEY}"
+  # wandb 0.14 expects a legacy 40-char key; new keys start with "wandb_v1_".
+  if [[ "${WANDB_API_KEY}" == wandb_v1_* ]]; then
+    echo "[setup] WANDB_API_KEY is 'wandb_v1_*' format; wandb 0.14 may reject it."
+    echo "[setup] Use WANDB_MODE=offline, or upgrade wandb, or use a legacy 40-char key."
+  else
+    wandb login --relogin "${WANDB_API_KEY}" || true
+  fi
 fi
 
 echo "[setup] pwd=$(pwd)"
